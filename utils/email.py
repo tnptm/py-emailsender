@@ -13,8 +13,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate
 from pydantic import BaseModel, EmailStr, Field
-from pydantic import ValidationError
-from typing import Sequence
+#from pydantic import ValidationError
+#from typing import Sequence
 from .validation_classes import Emails
 
 
@@ -52,22 +52,6 @@ class EmailSender:
         #self.validate_receivers(receivers)
         self.create_email_mime()
 
-    def validate_receivers(self, receivers: str | Sequence[str]) -> None:
-        """Validate email receivers."""
-        # make list of receivers if it's a string
-        if isinstance(receivers, str):
-            receivers = [receiver.strip() for receiver in receivers.split(',')]
-        # check if receivers is a sequence and not empty
-        if not isinstance(receivers, Sequence) or len(receivers) == 0:
-            raise ValueError("At least one receiver is required.")
-        
-        for receiver in receivers:
-            if not isinstance(receiver, str) or len(receiver) > 100:
-                raise ValueError("Each receiver must be a valid email address and less than 100 characters.")
-            try:
-                EmailStr(receiver)
-            except ValueError as e:
-                raise ValueError(f"Invalid email address: {receiver}. Error: {e}")    
             
     def create_email_mime(self) -> None:
         """Create MIME message from email data."""

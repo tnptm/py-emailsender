@@ -15,8 +15,9 @@ from dotenv import load_dotenv
 import os
 
 from .utils.email import EmailSender, EmailData, EmailAccount
+from .utils.validation_classes import validate_receivers
 from typing_extensions import Annotated
-
+#from pydantic import ValidationError
 
 app = FastAPI()
 
@@ -37,12 +38,27 @@ async def send_email( request: Request,
                body: Annotated[str, Form()],
                sender: Annotated[str, Form()],
                receivers: Annotated[str, Form()],
-               reply_to: Annotated[str | None, Form()] = None):
+               reply_to: Annotated[str | None, Form()] = None) -> HTMLResponse:
     """from email form, receive data and send email"""
     # Pydantic's EmailStr doesn't accept empty strings, so convert to None if empty.
     final_reply_to = reply_to if reply_to else None
-    final_receivers = [ email_addr.strip() for email_addr in receivers.split(',')] #if ',' in receiver else receiver
 
+    final_receivers = None
+    final_receivers = [ email_addr.strip() for email_addr in receivers.split(',')] #if ',' in receiver else receiver
+    
+
+    
+    # validate receivers
+    final_receivers = validate_receivers(receivers)
+    if final_receivers == None:
+        # if validation fails, return error message
+        return templates.TemplateResponse("email.html", context={ "request": request, 
+                                                                "sent": False, 
+                                                                "message": "Invalid email addresses."})
+    #else:    
+    #    return templates.TemplateResponse("email.html", context={ "request": request, 
+    #                                                    "sent": False, 
+    #                                                    "message": "Invalid email addresses."})
     # email sending code begins and ends to ".send()"
     email_data = EmailData(
         title=title,
@@ -56,7 +72,7 @@ async def send_email( request: Request,
         email_data=email_data, 
         email_account=email_account
     )
-    sender.create_email_mime()
+    # Send
     result = sender.send()
 
     # return result
