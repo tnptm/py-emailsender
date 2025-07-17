@@ -12,17 +12,20 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from pydantic import ValidationError
 from typing import Sequence
-
+from .validation_classes import Emails
 
 
 
 class EmailData(BaseModel):
-    title: str
-    body: str
-    sender: EmailStr
-    receivers: str | Sequence[str]
+    """Data model for email content."""
+    # limit title to 250 characters
+    title: str | None = Field(default=None, max_length=250)
+    body: str | None = Field(default=None, max_length=2500)
+    sender: EmailStr | None = None
+    receivers: Emails | None = None    #str | Sequence[EmailStr] | None = None
     reply_to: EmailStr | None = None
 
 class EmailAccount(BaseModel):
@@ -36,23 +39,45 @@ class SendResult(BaseModel):
     message: str
     sent: bool
 
+
+
 class EmailSender:
     mime_message: MIMEMultipart
     
     def __init__(self, email_data: EmailData, email_account: EmailAccount):
         self.email_data = email_data
         self.email_account = email_account
+        #receivers = self.email_data.receivers
+        self.mime_message = None
+        #self.validate_receivers(receivers)
+        self.create_email_mime()
 
+    def validate_receivers(self, receivers: str | Sequence[str]) -> None:
+        """Validate email receivers."""
+        # make list of receivers if it's a string
+        if isinstance(receivers, str):
+            receivers = [receiver.strip() for receiver in receivers.split(',')]
+        # check if receivers is a sequence and not empty
+        if not isinstance(receivers, Sequence) or len(receivers) == 0:
+            raise ValueError("At least one receiver is required.")
         
+        for receiver in receivers:
+            if not isinstance(receiver, str) or len(receiver) > 100:
+                raise ValueError("Each receiver must be a valid email address and less than 100 characters.")
+            try:
+                EmailStr(receiver)
+            except ValueError as e:
+                raise ValueError(f"Invalid email address: {receiver}. Error: {e}")    
+            
     def create_email_mime(self) -> None:
         """Create MIME message from email data."""
         if isinstance(self.email_data.receivers, str):
             self.email_data.receivers = [self.email_data.receivers]
-
+        print(f"Creating email MIME message for receivers: {self.email_data.receivers.emails if isinstance(self.email_data.receivers, Emails) else self.email_data.receivers}")
         # Create MIME message
         message = MIMEMultipart()
         message["From"] = self.email_data.sender
-        message["To"] = ", ".join(self.email_data.receivers) # compatible with several to addresses
+        message["To"] = ", ".join(self.email_data.receivers.emails) # compatible with several to addresses but limited to 150
         message["Subject"] = self.email_data.title
         message["Date"] = formatdate(localtime=True)
         if self.email_data.reply_to:
@@ -75,14 +100,14 @@ class EmailSender:
             if smtp_port == 465:
                 with smtplib.SMTP_SSL(self.email_account.smtp_server, smtp_port, context=context) as server:
                     server.login(self.email_account.username, self.email_account.password)
-                    server.sendmail(from_addr=self.email_data.sender, to_addrs=self.email_data.receivers, msg=self.mime_message.as_string())
+                    server.sendmail(from_addr=self.email_data.sender, to_addrs=self.email_data.receivers.emails, msg=self.mime_message.as_string())
             # SMTP (25,587)
             elif smtp_port == 25 or smtp_port == 587:
                 with smtplib.SMTP(self.email_account.smtp_server, smtp_port) as server:
                     if smtp_port == 587:
                         server.starttls(context=context)
                     server.login(self.email_account.username, self.email_account.password)
-                    server.sendmail(from_addr=self.email_data.sender, to_addrs=self.email_data.receivers, msg=self.mime_message.as_string())
+                    server.sendmail(from_addr=self.email_data.sender, to_addrs=self.email_data.receivers.emails, msg=self.mime_message.as_string())
             print(f"Email sent successfully to {self.email_data.receivers}.")    
             result = SendResult(
                 message = f"Email sent successfully to {self.email_data.receivers}.",
