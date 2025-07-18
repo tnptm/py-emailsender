@@ -1,3 +1,8 @@
+# Copyright (c) 2025 Toni Patama
+# This code is licensed under the MIT License.
+# See the LICENSE file for details.
+
+
 from pydantic import BaseModel, EmailStr, ValidationError, Field
 from typing import Sequence
 

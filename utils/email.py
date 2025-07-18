@@ -5,6 +5,8 @@ The email.py module provides a set of classes to simplify sending emails using
 Python's smtplib library. It uses Pydantic for data validation and provides an 
 object-oriented approach to email creation and sending.
 
+Author: tonipat047@gmail.com, 2025/07
+License: MIT License
 """
 
 import smtplib

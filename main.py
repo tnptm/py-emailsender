@@ -1,3 +1,6 @@
+# Copyright (c) 2025 Toni Patama
+# This code is licensed under the MIT License.
+# See the LICENSE file for details.
 """
 FastAPI web application for sending emails.
 
