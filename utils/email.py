@@ -23,19 +23,20 @@ loguru.logger.add("email_sender.log", rotation="1 MB")
 
 class EmailData(BaseModel):
     """Data model for email content."""
-    # limit title to 250 characters
+
     title: str | None = Field(default=None, max_length=250)
-    body: str | None = Field(default=None, max_length=2500)
-    sender: EmailStr | None = None
-    receivers: Emails | None = None    #str | Sequence[EmailStr] | None = None
-    reply_to: EmailStr | None = None
+    body: str = Field(..., max_length=2500, description="Email body content.")
+    sender: EmailStr = Field(..., description="Email sender address.")
+    receivers: Emails = Field(..., description="Email receiver addresses.")
+    reply_to: EmailStr | None = Field(
+        default=None, description="Reply-To email address."
+    )
 
 class EmailAccount(BaseModel):
-    password: str
-    username: str
-    smtp_server: str
-    smtp_port: str
-
+    password: str = Field(..., description="Email account password.")
+    username: str = Field(..., description="Email account username.")
+    smtp_server: str = Field(..., description="SMTP server address.")
+    smtp_port: int = Field(..., description="SMTP server port.")
 
 class SendResult(BaseModel):
     message: str
@@ -72,7 +73,6 @@ class EmailSender:
         message.attach(MIMEText(body, "plain"))
         self.mime_message = message
         
-
     def send(self) -> SendResult:
         """Create secure SSL context if smtp port is 465 and sends email"""
         context = ssl.create_default_context()

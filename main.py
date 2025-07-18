@@ -17,7 +17,7 @@ import os
 from .utils.email import EmailSender, EmailData, EmailAccount
 from .utils.validation_classes import validate_receivers
 from typing_extensions import Annotated
-#from pydantic import ValidationError
+from pydantic import ValidationError
 
 app = FastAPI()
 
@@ -44,9 +44,6 @@ async def send_email( request: Request,
     # Pydantic's EmailStr doesn't accept empty strings, so convert to None if empty.
     final_reply_to = reply_to if reply_to else None
 
-    final_receivers = None
-    final_receivers = [ email_addr.strip() for email_addr in receivers.split(',')] #if ',' in receiver else receiver
-    
     # validate receivers
     final_receivers = validate_receivers(receivers)
     if final_receivers == None:
@@ -56,14 +53,19 @@ async def send_email( request: Request,
                                                                 "message": "Invalid email addresses."})
 
     # email sending code begins and ends to ".send()"
-    email_data = EmailData(
-        title=title,
-        body=body,
-        sender=sender,
-        receivers=final_receivers,
-        reply_to=final_reply_to
-    )
-
+    try:
+        email_data = EmailData(
+            title=title,
+            body=body,
+            sender=sender,
+            receivers=final_receivers,
+            reply_to=final_reply_to
+        )
+    except ValidationError as e:
+        return templates.TemplateResponse("email.html", context={ "request": request, 
+                                                                "sent": False, 
+                                                                "message": f"Validation error: {e}"})
+    
     sender = EmailSender(
         email_data=email_data, 
         email_account=email_account
