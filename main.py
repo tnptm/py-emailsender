@@ -40,13 +40,12 @@ async def send_email( request: Request,
                receivers: Annotated[str, Form()],
                reply_to: Annotated[str | None, Form()] = None) -> HTMLResponse:
     """from email form, receive data and send email"""
+
     # Pydantic's EmailStr doesn't accept empty strings, so convert to None if empty.
     final_reply_to = reply_to if reply_to else None
 
     final_receivers = None
     final_receivers = [ email_addr.strip() for email_addr in receivers.split(',')] #if ',' in receiver else receiver
-    
-
     
     # validate receivers
     final_receivers = validate_receivers(receivers)
@@ -55,10 +54,7 @@ async def send_email( request: Request,
         return templates.TemplateResponse("email.html", context={ "request": request, 
                                                                 "sent": False, 
                                                                 "message": "Invalid email addresses."})
-    #else:    
-    #    return templates.TemplateResponse("email.html", context={ "request": request, 
-    #                                                    "sent": False, 
-    #                                                    "message": "Invalid email addresses."})
+
     # email sending code begins and ends to ".send()"
     email_data = EmailData(
         title=title,
@@ -67,7 +63,7 @@ async def send_email( request: Request,
         receivers=final_receivers,
         reply_to=final_reply_to
     )
-    #print(f"Email Data: {email_data}")
+
     sender = EmailSender(
         email_data=email_data, 
         email_account=email_account

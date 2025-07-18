@@ -17,7 +17,9 @@ from pydantic import BaseModel, EmailStr, Field
 #from typing import Sequence
 from .validation_classes import Emails
 
+import loguru
 
+loguru.logger.add("email_sender.log", rotation="1 MB")
 
 class EmailData(BaseModel):
     """Data model for email content."""
@@ -39,8 +41,6 @@ class SendResult(BaseModel):
     message: str
     sent: bool
 
-
-
 class EmailSender:
     mime_message: MIMEMultipart
     
@@ -52,12 +52,11 @@ class EmailSender:
         #self.validate_receivers(receivers)
         self.create_email_mime()
 
-            
     def create_email_mime(self) -> None:
         """Create MIME message from email data."""
         if isinstance(self.email_data.receivers, str):
             self.email_data.receivers = [self.email_data.receivers]
-        print(f"Creating email MIME message for receivers: {self.email_data.receivers.emails if isinstance(self.email_data.receivers, Emails) else self.email_data.receivers}")
+        loguru.logger.info(f"Creating email MIME message for receivers: {self.email_data.receivers.emails if isinstance(self.email_data.receivers, Emails) else self.email_data.receivers}")
         # Create MIME message
         message = MIMEMultipart()
         message["From"] = self.email_data.sender
@@ -65,7 +64,7 @@ class EmailSender:
         message["Subject"] = self.email_data.title
         message["Date"] = formatdate(localtime=True)
         if self.email_data.reply_to:
-            print(f"Reply-To: {self.email_data.reply_to}")
+            loguru.logger.info(f"Reply-To: {self.email_data.reply_to}")
             message["Reply-To"] = self.email_data.reply_to
 
         # Add body to email
@@ -92,20 +91,20 @@ class EmailSender:
                         server.starttls(context=context)
                     server.login(self.email_account.username, self.email_account.password)
                     server.sendmail(from_addr=self.email_data.sender, to_addrs=self.email_data.receivers.emails, msg=self.mime_message.as_string())
-            print(f"Email sent successfully to {self.email_data.receivers}.")    
+            loguru.logger.info(f"Email sent successfully to {self.email_data.receivers}.")
             result = SendResult(
                 message = f"Email sent successfully to {self.email_data.receivers}.",
                 sent = True
             )
 
         except smtplib.SMTPException as e:
-            print(f"Error sending email: {e}")
+            loguru.logger.error(f"Error sending email: {e}")
             result = SendResult(
                 message = f"Error sending email: {e}",
                 sent = False
             )
         except Exception as e:
-            print(f"Error sending email: {e}")
+            loguru.logger.error(f"Error sending email: {e}")
             result = SendResult(
                 message = f"Error sending email: {e}",
                 sent = False
